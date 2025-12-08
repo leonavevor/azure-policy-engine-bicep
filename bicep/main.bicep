@@ -54,12 +54,12 @@ module _policyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
   for initiativeModule in concat(builtInInitiatives, customPolicyInitiatives): if (assigmentMode == 'in-main' && assignAllPolicyInitiatives) {
     name: 'policy-assignment-${initiativeModule.name}'
     params: {
-      policyDefinitionId: initiativeModule.outputs.initiativeId
-      assignmentName: '${initiativeModule.outputs.initiativeName}-assignment'
-      assignmentDisplayName: initiativeModule.outputs.displayName
-      assignmentDescription: initiativeModule.outputs.description
+      policyDefinitionId: initiativeModule.policyDefinitionId ?? initiativeModule.name
+      assignmentName: '${initiativeModule.initiativeName}-assignment'
+      assignmentDisplayName: initiativeModule.displayName ?? ''
+      assignmentDescription: initiativeModule.description ?? ''
       enforcementMode: 'Default'
-      assignmentParameters: initiativeModule.outputs.assignmentParameters
+      assignmentParameters: initiativeModule.parameters ?? {}
     }
     dependsOn: [
       _customPolicyDefinitions
@@ -73,3 +73,4 @@ module _policyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
 
 // TODO: Find a way to output array of initiative IDs from modules
 //output customPolicyInitiativeId string = _customPolicyInitiatives[0].outputs.initiativeId
+//output out_customPolicyInitiatives object = toObject(_customPolicyInitiatives, entry => entry.outputs)

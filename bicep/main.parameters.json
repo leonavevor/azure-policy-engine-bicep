@@ -9,7 +9,7 @@
       "value": true
     },
     "assignAllPolicyInitiatives": {
-      "value": false
+      "value": true
     },
     "customPolicyDefinitions": {
       "value": [{

@@ -40,6 +40,10 @@ resource policyDefinition 'Microsoft.Authorization/policyDefinitions@2025-01-01'
   }
 }
 
+
+@sys.description('The entire Policy Definition object.')
+output outPolicyDefinition object = policyDefinition
+
 @sys.description('Policy Definition Name.')
 output name string = policyDefinition.name
 

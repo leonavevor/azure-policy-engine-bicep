@@ -38,4 +38,6 @@ resource policyAssignment 'Microsoft.Authorization/policyAssignments@2023-04-01'
   }
 }
 
+output out object = customPolicySetDefinition
 output initiativeId string = customPolicySetDefinition.id
+
