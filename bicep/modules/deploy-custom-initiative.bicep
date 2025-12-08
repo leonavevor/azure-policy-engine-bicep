@@ -26,9 +26,9 @@ resource customPolicySetDefinition 'Microsoft.Authorization/policySetDefinitions
   }
 }
 
-// Assign the initiative
+// Assign the initiative (in module)
 resource policyAssignment 'Microsoft.Authorization/policyAssignments@2023-04-01' = if (assignmentMode == 'in-modules') {
-  name: '${initiative.name}-assignment'
+  name: '${initiative.name}'
   properties: {
     displayName: initiative.displayName
     description: initiative.description
@@ -40,4 +40,8 @@ resource policyAssignment 'Microsoft.Authorization/policyAssignments@2023-04-01'
 
 output out object = customPolicySetDefinition
 output initiativeId string = customPolicySetDefinition.id
+output initiativeName string = customPolicySetDefinition.name
+output displayName string = customPolicySetDefinition.properties.displayName
+output description string = customPolicySetDefinition.properties.description
+output parameters object = customPolicySetDefinition.properties.parameters
 

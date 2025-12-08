@@ -1,5 +1,8 @@
 targetScope = 'managementGroup'
 
+@description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
+param targetManagementGroupName string = managementGroup().name
+
 @description('Parameter to control where the policy initiatives are assigned from this main bicep file.')
 @allowed([
   'in-main'
@@ -16,8 +19,8 @@ param customPolicyInitiatives object[] = []
 
 param deployCustomPolicyDefinitions bool = true
 param deployCustomPolicyInitiatives bool = true
-param assignAllPolicyInitiatives bool = true
-
+param assignCustomPolicyInitiatives bool = true
+param assignBuiltInPolicyInitiatives bool = true
 
 // Deploy custom policy definitions 1st, since custom initiatives may depend on them
 module _customPolicyDefinitions './modules/deploy-custom-policy-definition.bicep' = [
@@ -49,25 +52,46 @@ module _customPolicyInitiatives './modules/deploy-custom-initiative.bicep' = [
   }
 ]
 
-// Assign all initiatives (built-in and custom) 
-module _policyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
-  for initiativeModule in concat(builtInInitiatives, customPolicyInitiatives): if (assigmentMode == 'in-main' && assignAllPolicyInitiatives) {
-    name: 'policy-assignment-${initiativeModule.name}'
+// Assign policy initiatives at management group level from main bicep file
+module _customPolicyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
+  for index in range(0, length(customPolicyInitiatives)): if (assigmentMode == 'in-main' && assignCustomPolicyInitiatives) {
+    name: 'policy-assignment-${_customPolicyInitiatives[index].name}'
     params: {
-      policyDefinitionId: initiativeModule.policyDefinitionId ?? initiativeModule.name
-      assignmentName: '${initiativeModule.initiativeName}-assignment'
-      assignmentDisplayName: initiativeModule.displayName ?? ''
-      assignmentDescription: initiativeModule.description ?? ''
+      policyDefinitionId: _customPolicyInitiatives[index].outputs.?initiativeId ?? fail('Initiative ID not found')
+      assignmentName: _customPolicyInitiatives[index].outputs.?initiativeName ?? fail('Initiative name not found')
+      assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? fail('Display name not found')
+      assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? fail('Description not found')
       enforcementMode: 'Default'
-      assignmentParameters: initiativeModule.parameters ?? {}
+      assignmentParameters: _customPolicyInitiatives[index].outputs.?parameters ?? {}
     }
     dependsOn: [
       _customPolicyDefinitions
-      _customPolicyInitiatives
+      _customPolicyInitiatives[index]
     ]
 
-    // scope: managementGroup(targetManagementGroupId)
-    // scope: subscription()
+    scope: managementGroup(targetManagementGroupName)
+  }
+]
+
+// Assign built-in policy initiatives at management group level from main bicep file
+module _builtInPolicyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
+  for initiative in builtInInitiatives: if (assigmentMode == 'in-main' && assignBuiltInPolicyInitiatives) {
+    name: 'policy-assignment-${initiative.initiativeName}'
+    params: {
+      policyDefinitionId: initiative.?policyDefinitionId ?? fail('Policy Definition ID not found')
+      assignmentName: initiative.?initiativeName ?? fail('Initiative name not found')
+      assignmentDisplayName: initiative.initiativeName ?? fail('Display name not found')
+      assignmentDescription: initiative.?description ?? fail('Description not found')
+      enforcementMode: 'Default'
+      assignmentParameters: initiative.?parameters ?? {}
+    }
+
+    dependsOn: [
+      _customPolicyDefinitions
+      _customPolicyAssignmentsMgLevel
+    ]
+
+    scope: managementGroup(targetManagementGroupName)
   }
 ]
 
