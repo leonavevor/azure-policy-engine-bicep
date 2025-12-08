@@ -1,0 +1,14 @@
+{
+    "policies": [
+        {
+            "description": "Azure Key Vault should disable public network access",
+            "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/405c5871-3e91-4644-8a63-58e19d68ff5b",
+            "parameters": {}
+        },
+        {
+            "description": "App Service apps should only be accessible over HTTPS",
+            "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/a4af4a39-4135-47fb-b175-47fbdf85311d",
+            "parameters": {}
+        }
+    ]
+}
