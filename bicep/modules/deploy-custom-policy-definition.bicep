@@ -27,6 +27,8 @@ param parameters object = {}
 @sys.description('Required. The Policy Rule details for the Policy Definition.')
 param policyRule object
 
+
+
 resource policyDefinition 'Microsoft.Authorization/policyDefinitions@2025-01-01' = {
   name: name
   properties: {

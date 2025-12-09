@@ -143,7 +143,7 @@ policies/* -> collect -> group/filter -> aggregate JSON -> copy template -> envs
 - 
 ## Troubleshooting
 - when you get the following error:
-  -   
+  - "The content for this response was already consumed" => Run `az deployment <scope> what-if` first to validate before create.
 - OIDC login: verify GitHub federation in Azure AD app registration.
 - Wrong scope: check `az_deployment_type` and required IDs.
 - Parameter mismatches: align template schema and parameters.
