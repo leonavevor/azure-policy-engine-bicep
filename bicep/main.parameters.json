@@ -8,7 +8,10 @@
     "deployCustomPolicyInitiatives": {
       "value": true
     },
-    "assignAllPolicyInitiatives": {
+    "assignCustomPolicyInitiatives": {
+      "value": true
+    },
+    "assignBuiltInPolicyInitiatives": {
       "value": true
     },
     "customPolicyDefinitions": {
@@ -179,66 +182,22 @@
 }]
     },
     "customPolicyInitiatives": {
-      "value": [{
-  "name": "locations-initiative",
-  "displayName": "Allowed resource locations initiative",
-  "description": "Policy for restricting the deployment locations.",
-  "metadata": {
-    "category": "Custom Policies",
-    "version": "1.0.0"
-  },
-  "parameters": {
-    "listOfAllowedLocations": {
-      "type": "Array",
-      "metadata": {
-        "description": "The list of locations that can be specified when deploying resources.",
-        "strongType": "location",
-        "displayName": "Allowed locations"
-      },
-      "defaultValue": [
-        "australiaeast",
-        "australiasoutheast"
-      ]
-    }
-  },
-  "policyDefinitions": [
-    {
-      "policyDefinitionReferenceId": "Allowed locations",
-      "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c",
-      "parameters": {
-        "listOfAllowedLocations": {
-          "value": "[parameters('listOfAllowedLocations')]"
-        }
-      }
-    },
-    {
-      "policyDefinitionReferenceId": "Allowed locations for resource groups",
-      "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/e765b5de-1225-4ba3-bd56-1ac6695af988",
-      "parameters": {
-        "listOfAllowedLocations": {
-          "value": "[parameters('listOfAllowedLocations')]"
-        }
-      }
-    }
-  ]
-}]
+      "value": ${CUSTOM_POLICY_INITIATIVES_CONTENTS}
     },
     "builtInInitiatives": {
       "value": [{
-    "policies": [
-        {
-            "initiativeName": "Sovereignty Baseline - Confidential Policies",
-            "description": "Confidential Policies",
-            "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/03de05a4-c324-4ccd-882f-a814ea8ab9ea",
-            "parameters": {}
-        },
-        {
-            "initiativeName": "Sovereignty Baseline - Global Policies",
-            "description": "Global Policies",
-            "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
-            "parameters": {}
-        }
-    ]
+    "initiativeName": "03de05a4-c324-4ccd-882f-a814ea8ab9ea",
+    "displayName": "Sovereignty Baseline - Confidential Policies",
+    "description": "Confidential Policies",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/03de05a4-c324-4ccd-882f-a814ea8ab9ea",
+    "parameters": {}
+},
+{
+    "initiativeName": "c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
+    "displayName": "Sovereignty Baseline - Global Policies",
+    "description": "Global Policies",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
+    "parameters": {}
 }]
     }
   }

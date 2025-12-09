@@ -1,5 +1,7 @@
 targetScope = 'resourceGroup'
 
+metadata Description = 'Module to create a policy exemption using a deployment script with a user assigned managed identity.'
+
 @description('The name of the deployment script.')
 param name string
 

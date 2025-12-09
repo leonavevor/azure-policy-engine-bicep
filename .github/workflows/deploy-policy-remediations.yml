@@ -2,9 +2,9 @@ name: Policy Remediations
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
 
 env:
   script_file_path: ./scripts/policy-remediations.ps1 # file path to policy remediation script

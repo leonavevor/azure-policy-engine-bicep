@@ -1,5 +1,7 @@
 targetScope = 'managementGroup'
 
+metadata Description = 'Module to deploy policy exemptions at management group, subscription, resource group, and resource levels.'
+
 @description('Creates a policy exemption for a policy assignment.')
 param exemptions exemptionsType[] = []
 

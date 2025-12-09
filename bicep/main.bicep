@@ -8,14 +8,14 @@ param targetManagementGroupName string = managementGroup().name
   'in-main'
   'in-modules'
 ])
-param assigmentMode string = 'in-main'
+param assignmentMode string = 'in-main'
 
 // workaround hardcore in the filenames via parameters file one by one which is not ideal but works for now. 
 // or run a script to consolidate all file contents (base on category), use it to create/update parameter files, then run bicep deployment
 // ref: https://github.com/Azure/ALZ-Bicep/blob/main/infra-as-code/bicep/modules/policy/definitions/customPolicyDefinitions.bicep
-param builtInInitiatives object[] = []
 param customPolicyDefinitions object[] = []
 param customPolicyInitiatives object[] = []
+param builtInInitiatives object[] = []
 
 param deployCustomPolicyDefinitions bool = true
 param deployCustomPolicyInitiatives bool = true
@@ -43,7 +43,7 @@ module _customPolicyInitiatives './modules/deploy-custom-initiative.bicep' = [
   for initiative in customPolicyInitiatives: if (deployCustomPolicyInitiatives) {
     name: 'custom-policy-initiative-${uniqueString(deployment().name, initiative.name)}'
     params: {
-      assignmentMode: assigmentMode
+      assignmentMode: assignmentMode
       initiative: initiative
     }
     dependsOn: [
@@ -53,15 +53,15 @@ module _customPolicyInitiatives './modules/deploy-custom-initiative.bicep' = [
 ]
 
 // Assign policy initiatives at management group level from main bicep file
-module _customPolicyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
-  for index in range(0, length(customPolicyInitiatives)): if (assigmentMode == 'in-main' && assignCustomPolicyInitiatives) {
+module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bicep' = [
+  for index in range(0, length(customPolicyInitiatives)): if (assignmentMode == 'in-main' && assignCustomPolicyInitiatives) {
     name: 'policy-assignment-${_customPolicyInitiatives[index].name}'
     params: {
-      policyDefinitionId: _customPolicyInitiatives[index].outputs.?initiativeId ?? fail('Initiative ID not found')
-      assignmentName: _customPolicyInitiatives[index].outputs.?initiativeName ?? fail('Initiative name not found')
-      assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? fail('Display name not found')
-      assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? fail('Description not found')
-      enforcementMode: 'Default'
+      policyDefinitionId: _customPolicyInitiatives[index].outputs.?initiativeId
+      assignmentName: _customPolicyInitiatives[index].outputs.?initiativeName
+      assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? _customPolicyInitiatives[index].outputs.?initiativeName ?? ''
+      assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? ''
+      enforcementMode: _customPolicyInitiatives[index].outputs.?enforcementMode ?? 'Default'
       assignmentParameters: _customPolicyInitiatives[index].outputs.?parameters ?? {}
     }
     dependsOn: [
@@ -74,21 +74,25 @@ module _customPolicyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep
 ]
 
 // Assign built-in policy initiatives at management group level from main bicep file
-module _builtInPolicyAssignmentsMgLevel './modules/deploy-policy-assignment.bicep' = [
-  for initiative in builtInInitiatives: if (assigmentMode == 'in-main' && assignBuiltInPolicyInitiatives) {
+module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.bicep' = [
+  for initiative in builtInInitiatives: if (assignmentMode == 'in-main' && assignBuiltInPolicyInitiatives) {
     name: 'policy-assignment-${initiative.initiativeName}'
     params: {
-      policyDefinitionId: initiative.?policyDefinitionId ?? fail('Policy Definition ID not found')
-      assignmentName: initiative.?initiativeName ?? fail('Initiative name not found')
-      assignmentDisplayName: initiative.initiativeName ?? fail('Display name not found')
-      assignmentDescription: initiative.?description ?? fail('Description not found')
-      enforcementMode: 'Default'
+      policyDefinitionId: initiative.?policyDefinitionId 
+      assignmentName: take(replace(initiative.?initiativeName, '-', ''), 24) ?? take(uniqueString(deployment().name, initiative.initiativeName), 24)
+      assignmentDisplayName: initiative.displayName ?? initiative.initiativeName ?? '' 
+      assignmentDescription: initiative.?description ?? ''
+      enforcementMode: initiative.?enforcementMode ?? 'Default'
       assignmentParameters: initiative.?parameters ?? {}
+      nonComplianceMessages: initiative.?nonComplianceMessages ?? []
+      notScopes: initiative.?notScopes ?? []
+      overrides: initiative.?overrides ?? []
+      resourceSelectors: initiative.?resourceSelectors ?? []
     }
 
     dependsOn: [
       _customPolicyDefinitions
-      _customPolicyAssignmentsMgLevel
+      _customPolicyInitiativeAssignments
     ]
 
     scope: managementGroup(targetManagementGroupName)

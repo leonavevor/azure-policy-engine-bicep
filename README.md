@@ -82,6 +82,9 @@ Edit policies (JSON) + Bicep modules
  Select scope: tenant | mg | sub | rg
             |
             v
+  run what-if to validate (optional)
+            |
+            v
    az deployment <scope> create
             |
             v
@@ -139,6 +142,8 @@ policies/* -> collect -> group/filter -> aggregate JSON -> copy template -> envs
 - Ensure correct scope and provider registrations.
 - 
 ## Troubleshooting
+- when you get the following error:
+  -   
 - OIDC login: verify GitHub federation in Azure AD app registration.
 - Wrong scope: check `az_deployment_type` and required IDs.
 - Parameter mismatches: align template schema and parameters.

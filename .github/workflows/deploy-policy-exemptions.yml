@@ -2,9 +2,9 @@ name: Policy Exemption Deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
 
 env:
   bicep_template: bicep/modules/deploy-policy-exemption.bicep
