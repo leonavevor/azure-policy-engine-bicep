@@ -6,7 +6,7 @@
       "value": true
     },
     "deployCustomPolicyInitiatives": {
-      "value": true
+      "value": false
     },
     "assignCustomPolicyInitiatives": {
       "value": true
@@ -15,190 +15,13 @@
       "value": true
     },
     "customPolicyDefinitions": {
-      "value": [{
-  "name": "FunctionAppHttpsOnly",
-  "displayName": "Function App should only be accessible over HTTPS",
-  "description": "Use of HTTPS ensures server/service authentication and protects data in transit from network layer eavesdropping attacks.",
-  "metadata": {
-    "version": "1.0.0",
-    "category": "App Service"
-  },
-  "mode": "Indexed",
-  "parameters": {
-    "effect": {
-      "type": "String",
-      "metadata": {
-        "displayName": "Effect",
-        "description": "DeployIfNotExists, AuditIfNotExists or Disabled the execution of the Policy"
-      },
-      "allowedValues": [
-        "DeployIfNotExists",
-        "AuditIfNotExists",
-        "Disabled"
-      ],
-      "defaultValue": "DeployIfNotExists"
-    }
-  },
-  "policyRule": {
-    "if": {
-      "allOf": [
-        {
-          "field": "type",
-          "equals": "Microsoft.Web/sites"
-        },
-        {
-          "field": "kind",
-          "contains": "functionapp"
-        }
-      ]
-    },
-    "then": {
-      "effect": "[parameters('effect')]",
-      "details": {
-        "type": "Microsoft.Web/sites",
-        "name": "[field('name')]",
-        "existenceCondition": {
-          "field": "Microsoft.Web/sites/httpsOnly",
-          "equals": true
-        },
-        "evaluationDelay": "AfterProvisioningSuccess",
-        "roleDefinitionIds": [
-          "/providers/Microsoft.Authorization/roleDefinitions/de139f84-1756-47ae-9be6-808fbbe84772"
-        ],
-        "deployment": {
-          "properties": {
-            "mode": "incremental",
-            "parameters": {
-              "name": {
-                "value": "[field('name')]"
-              },
-              "location": {
-                "value": "[field('location')]"
-              }
-            },
-            "template": {
-              "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-              "contentVersion": "1.0.0.0",
-              "parameters": {
-                "name": {
-                  "type": "string"
-                },
-                "location": {
-                  "type": "string"
-                }
-              },
-              "resources": [
-                {
-                  "name": "[parameters('name')]",
-                  "type": "Microsoft.Web/sites",
-                  "location": "[parameters('location')]",
-                  "apiVersion": "2018-11-01",
-                  "properties": {
-                    "httpsOnly": true
-                  }
-                }
-              ]
-            }
-          }
-        }
-      }
-    }
-  }
-},{
-  "name": "resourceLockOnResourceGroups",
-  "displayName": "Deploy CanNotDelete Resource Lock on Resource Groups",
-  "description": "Creates a resource lock at the resource group level for preventing resource deletion.",
-  "metadata": {
-    "category": "Regulatory Compliance",
-    "version": "1.0.0"
-  },
-  "mode": "All",
-  "parameters": {
-    "rgNames": {
-      "type": "Array",
-      "metadata": {
-        "displayName": "Resource Groups names",
-        "description": "The list of RG that should have cannot delete resource lock, all resources will inherit the lock"
-      },
-      "defaultValue": [""]
-    },
-    "effect": {
-      "type": "String",
-      "metadata": {
-        "displayName": "Effect",
-        "description": "DeployIfNotExists, AuditIfNotExists or Disabled the execution of the Policy"
-      },
-      "allowedValues": ["DeployIfNotExists", "AuditIfNotExists", "Disabled"],
-      "defaultValue": "DeployIfNotExists"
-    }
-  },
-  "policyRule": {
-    "if": {
-      "allOf": [
-        {
-          "field": "type",
-          "equals": "Microsoft.Resources/subscriptions/resourceGroups"
-        },
-        {
-          "field": "name",
-          "in": "[parameters('rgNames')]"
-        }
-      ]
-    },
-    "then": {
-      "effect": "[parameters('effect')]",
-      "details": {
-        "type": "Microsoft.Authorization/locks",
-        "existenceCondition": {
-          "field": "Microsoft.Authorization/locks/level",
-          "equals": "CanNotDelete"
-        },
-        "roleDefinitionIds": [
-          "/providers/Microsoft.Authorization/roleDefinitions/28bf596f-4eb7-45ce-b5bc-6cf482fec137"
-        ],
-        "deployment": {
-          "properties": {
-            "mode": "incremental",
-            "template": {
-              "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
-              "contentVersion": "1.0.0.0",
-              "resources": [
-                {
-                  "type": "Microsoft.Authorization/locks",
-                  "apiVersion": "2020-05-01",
-                  "name": "DenyDelete",
-                  "properties": {
-                    "level": "CanNotDelete",
-                    "notes": "Prevents deletion of resource group."
-                  }
-                }
-              ]
-            }
-          }
-        }
-      }
-    }
-  }
-}]
+      "value": []
     },
     "customPolicyInitiatives": {
-      "value": ${CUSTOM_POLICY_INITIATIVES_CONTENTS}
+      "value": []
     },
     "builtInInitiatives": {
-      "value": [{
-    "initiativeName": "03de05a4-c324-4ccd-882f-a814ea8ab9ea",
-    "displayName": "Sovereignty Baseline - Confidential Policies",
-    "description": "Confidential Policies",
-    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/03de05a4-c324-4ccd-882f-a814ea8ab9ea",
-    "parameters": {}
-},
-{
-    "initiativeName": "c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
-    "displayName": "Sovereignty Baseline - Global Policies",
-    "description": "Global Policies",
-    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
-    "parameters": {}
-}]
+      "value": []
     }
   }
 }

@@ -3,7 +3,7 @@
 
 prep:
 	mkdir -p ./compiled
-	./scripts/prep-params.sh
+	./scripts/prep-params.sh --policy-dir ./policies --file-extension .json
 
 build: clean lint prep
 	mkdir -p ./compiled
@@ -26,7 +26,7 @@ whatif-debug: build
 	az deployment mg what-if --name "deployment001" --location "westeurope" --management-group-id "mg-corp" --template-file ./compiled/main.json --parameters @./bicep/main.parameters.json --no-pretty-print --debug
 
 deploy: build
-	az deployment mg create --name "deployment001" --location "westeurope" --management-group-id "mg-corp" --template-file ./compiled/main.json --parameters @./bicep/main.parameters.json
+	az deployment mg create --name "deployment001" --location "westeurope" --management-group-id "mg-online" --template-file ./compiled/main.json --parameters @./bicep/main.parameters.json
 
 clean:
 	rm -rf compiled decompiled outputs

@@ -52,26 +52,26 @@ module _customPolicyInitiatives './modules/deploy-custom-initiative.bicep' = [
   }
 ]
 
-// Assign policy initiatives at management group level from main bicep file
-module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bicep' = [
-  for index in range(0, length(customPolicyInitiatives)): if (assignmentMode == 'in-main' && assignCustomPolicyInitiatives) {
-    name: 'policy-assignment-${_customPolicyInitiatives[index].name}'
-    params: {
-      policyDefinitionId: _customPolicyInitiatives[index].outputs.?initiativeId
-      assignmentName: _customPolicyInitiatives[index].outputs.?initiativeName
-      assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? _customPolicyInitiatives[index].outputs.?initiativeName ?? ''
-      assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? ''
-      enforcementMode: _customPolicyInitiatives[index].outputs.?enforcementMode ?? 'Default'
-      assignmentParameters: _customPolicyInitiatives[index].outputs.?parameters ?? {}
-    }
-    dependsOn: [
-      _customPolicyDefinitions
-      _customPolicyInitiatives[index]
-    ]
+// // Assign policy initiatives at management group level from main bicep file
+// module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bicep' = [
+//   for index in range(0, length(customPolicyInitiatives)): if (assignmentMode == 'in-main' && assignCustomPolicyInitiatives) {
+//     name: 'policy-assignment-${_customPolicyInitiatives[index].name}'
+//     params: {
+//       policyDefinitionId: _customPolicyInitiatives[index].outputs.?initiativeId
+//       assignmentName: _customPolicyInitiatives[index].outputs.?initiativeName
+//       assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? _customPolicyInitiatives[index].outputs.?initiativeName ?? ''
+//       assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? ''
+//       enforcementMode: _customPolicyInitiatives[index].outputs.?enforcementMode ?? 'Default'
+//       assignmentParameters: _customPolicyInitiatives[index].outputs.?parameters ?? {}
+//     }
+//     dependsOn: [
+//       _customPolicyDefinitions
+//       _customPolicyInitiatives[index]
+//     ]
 
-    scope: managementGroup(targetManagementGroupName)
-  }
-]
+//     scope: managementGroup(targetManagementGroupName)
+//   }
+// ]
 
 // Assign built-in policy initiatives at management group level from main bicep file
 module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.bicep' = [
@@ -92,7 +92,7 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
 
     dependsOn: [
       _customPolicyDefinitions
-      _customPolicyInitiativeAssignments
+      //_customPolicyInitiativeAssignments
     ]
 
     scope: managementGroup(targetManagementGroupName)
