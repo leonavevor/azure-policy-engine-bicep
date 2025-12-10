@@ -1,7 +1,7 @@
 targetScope = 'managementGroup'
 
-@description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
-param targetManagementGroupName string = managementGroup().name
+//@description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
+//param managementGroupName string = managementGroup().name
 
 @description('Parameter to control where the policy initiatives are assigned from this main bicep file.')
 @allowed([
@@ -83,13 +83,18 @@ module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bi
       assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? ''
       enforcementMode: _customPolicyInitiatives[index].outputs.?enforcementMode ?? 'Default'
       assignmentParameters: customPolicyInitiatives[index].?assignmentParameters ?? {}
+      nonComplianceMessages: customPolicyInitiatives[index].?nonComplianceMessages ?? []
+      notScopes: customPolicyInitiatives[index].?notScopes ?? []
+      overrides: customPolicyInitiatives[index].?overrides ?? []
+      resourceSelectors: customPolicyInitiatives[index].?resourceSelectors ?? []
     }
     dependsOn: [
       _customPolicyDefinitions
       _customPolicyInitiatives[index]
     ]
 
-    scope: managementGroup(targetManagementGroupName)
+    //scope: map(range(0, length(managementGroupNamesToCreate)), i => managementGroup(managementGroupNamesToCreate[i]))[0]
+    scope: managementGroup(managementGroup().name)
   }
 ]
 
@@ -118,6 +123,7 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
       //_customPolicyInitiativeAssignments
     ]
 
-    scope: managementGroup(targetManagementGroupName)
+    //scope: map(range(0, length(managementGroupNamesToCreate)), i => managementGroup(managementGroupNamesToCreate[i]))[0]
+    scope: managementGroup(managementGroup().name)
   }
 ]

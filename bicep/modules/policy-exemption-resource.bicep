@@ -59,7 +59,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     }
   }
   properties: {
-    azPowerShellVersion: '9.7'
+    azPowerShellVersion: '11.0'
     scriptContent: '''
     param(
       [object] $metadata,
