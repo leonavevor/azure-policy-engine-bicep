@@ -4,3 +4,5 @@ build/
 outputs/
 compiled/
 decompiled/
+
+bicep/*.parameters.json
