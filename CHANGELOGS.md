@@ -10,3 +10,26 @@
 Files impacted:
 - `scripts/prep-params.sh` (logic updates for defaults, placeholder detection, JSON handling, logging)
 - `bicep/main.parameters.json` (generated output now consistently valid JSON)
+
+## **2025-12-10**
+
+### Commits
+- `9c26fc3` — fix default envs to work as expected
+	- **Changes**: `.default.envs`, `.gitignore`, `Makefile`, `bicep/main.bicep`, `bicep/main.parameters.json`, `bicep/main.parameters.json.tmpl`, `scripts/prep-params.sh`
+	- **Notes**: Align default env handling with parameters template; ensure generated parameters stay valid.
+
+- `6fe868a` — improved MG creation module with array outputs
+	- **Changes**: `README.md`, `bicep/main.bicep`, `bicep/modules/create-management-groups.bicep`
+	- **Notes**: Management group module now returns arrays for downstream consumption.
+
+- `4775d3d` — intergrated mg create into main also
+	- **Changes**: `Makefile`, `bicep/main.bicep`
+	- **Notes**: Wired the MG creation into main orchestration.
+
+- `a399581` — add mg creation module
+	- **Changes**: `.default.envs`, `Makefile`, `README.md`, `bicep/main.parameters.json`, `bicep/mg.bicep`, `bicep/modules/create-management-groups.bicep`, `bicep/modules/deploy-custom-policy-definition.bicep`, `policies/custom-policy-initiatives/locations-initiative.json`
+	- **Notes**: Introduced MG creation and related scaffolding.
+
+### Fixes
+- **Policy assignment parameters**: Updated `bicep/main.bicep` to pass initiative `assignmentParameters` (values) to policy assignments instead of the parameter schema. Prevents `InvalidRequestContent: Could not find member 'type'...` errors.
+- **Outcome**: `properties.parameters` serialize correctly as `{ parameterName: { value: ... } }`.

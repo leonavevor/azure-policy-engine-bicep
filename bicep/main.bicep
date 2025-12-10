@@ -22,7 +22,6 @@ param deployCustomPolicyInitiatives bool = true
 param assignCustomPolicyInitiatives bool = true
 param assignBuiltInPolicyInitiatives bool = true
 
-
 @description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
 param parentManagementGroupName string = 'mg-landing-zones'
 
@@ -42,7 +41,6 @@ module _managementGroups './modules/create-management-groups.bicep' = if (creatM
     parentManagementGroupId: parentManagementGroupName
   }
 }
-
 
 @description('Deploy custom policy definitions 1st, since custom initiatives may depend on them')
 module _customPolicyDefinitions './modules/deploy-custom-policy-definition.bicep' = [
@@ -84,7 +82,7 @@ module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bi
       assignmentDisplayName: _customPolicyInitiatives[index].outputs.?displayName ?? _customPolicyInitiatives[index].outputs.?initiativeName ?? ''
       assignmentDescription: _customPolicyInitiatives[index].outputs.?description ?? ''
       enforcementMode: _customPolicyInitiatives[index].outputs.?enforcementMode ?? 'Default'
-      assignmentParameters: _customPolicyInitiatives[index].outputs.?parameters ?? {}
+      assignmentParameters: customPolicyInitiatives[index].?assignmentParameters ?? {}
     }
     dependsOn: [
       _customPolicyDefinitions
@@ -100,9 +98,12 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
   for initiative in builtInInitiatives: if (assignmentMode == 'in-main' && assignBuiltInPolicyInitiatives) {
     name: 'policy-assignment-${initiative.initiativeName}'
     params: {
-      policyDefinitionId: initiative.?policyDefinitionId 
-      assignmentName: take(replace(initiative.?initiativeName, '-', ''), 24) ?? take(uniqueString(deployment().name, initiative.initiativeName), 24)
-      assignmentDisplayName: initiative.displayName ?? initiative.initiativeName ?? '' 
+      policyDefinitionId: initiative.?policyDefinitionId
+      assignmentName: take(replace(initiative.?initiativeName, '-', ''), 24) ?? take(
+        uniqueString(deployment().name, initiative.initiativeName),
+        24
+      )
+      assignmentDisplayName: initiative.displayName ?? initiative.initiativeName ?? ''
       assignmentDescription: initiative.?description ?? ''
       enforcementMode: initiative.?enforcementMode ?? 'Default'
       assignmentParameters: initiative.?parameters ?? {}
@@ -115,9 +116,8 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
     dependsOn: [
       _customPolicyDefinitions
       //_customPolicyInitiativeAssignments
-    ] 
+    ]
 
     scope: managementGroup(targetManagementGroupName)
   }
 ]
-
