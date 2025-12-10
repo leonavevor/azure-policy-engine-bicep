@@ -127,7 +127,7 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
     dependsOn: [
       _customPolicyDefinitions
       //_customPolicyInitiativeAssignments
-    ]
+    ] 
 
     scope: managementGroup(targetManagementGroupName)
   }
