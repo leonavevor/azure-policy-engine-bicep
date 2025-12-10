@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Purpose: Prepare/Parse policy definition and initiative files into Bicep parameter files. NOTE: This script requires 
-set -euo pipefail
+set -xeuo pipefail
 
 POLICY_DIR="${POLICY_DIR:-./policies}"
 FILE_EXTENSION="${FILE_EXTENSION:-.json}"
@@ -17,9 +17,17 @@ ENV_PATTERNS=("_POLICY_" "_")
 # export DEPLOY_CUSTOM_POLICY_INITIATIVES=true
 # export ASSIGN_ALL_POLICY_INITIATIVES=true
 
-set -a
-source "${DEFAULTS_ENV:-./.default.envs}"
-set +a
+DEFAULTS_FILE_PATH="${DEFAULTS_ENV:-./.default.envs}"
+if [[ -r "$DEFAULTS_FILE_PATH" ]]; then
+    # Safely source defaults: auto-export and temporarily allow unset references
+    set -a
+    set +u
+    source "$DEFAULTS_FILE_PATH"
+    set -u
+    set +a
+else
+    echo "Defaults file not found or unreadable: $DEFAULTS_FILE_PATH" >&2
+fi
 
 declare -A DEPLOY_FLAGS=(
     [BUILTIN_POLICY_INITIATIVES]="${DEPLOY_BUILTIN_POLICY_INITIATIVES:-true}"
@@ -93,28 +101,63 @@ for group in "${!DEPLOY_FLAGS[@]}"; do
     aggregate_policy_group "$group"
 done
 
-[[ -f "$TEMPLATE_PARAM_FILE" ]] || { echo "Template $TEMPLATE_PARAM_FILE not found" >&2; exit 1; }
-cp "$TEMPLATE_PARAM_FILE" "$OUTPUT_PARAM_FILE"
+declare -A SUBSTITUTION_DEFAULTS=(
+    [CREATE_MANAGEMENT_GROUPS]=false
+    [DEPLOY_CUSTOM_POLICY_DEFINITIONS]=false
+    [DEPLOY_CUSTOM_POLICY_INITIATIVES]=false
+    [ASSIGN_CUSTOM_POLICY_INITIATIVES]=false
+    [ASSIGN_BUILTIN_POLICY_INITIATIVES]=false
+    [CUSTOM_POLICY_DEFINITIONS_CONTENTS]='[]'
+    [CUSTOM_POLICY_INITIATIVES_CONTENTS]='[]'
+    [BUILTIN_POLICY_INITIATIVES_CONTENTS]='[]'
+)
 
-declare -a policy_vars=()
-declare -A seen_policy_vars=()
-for pattern in "${ENV_PATTERNS[@]:-}"; do
-    [[ -z "$pattern" ]] && continue
-    while IFS='=' read -r name _; do
-        [[ "$name" == *"$pattern"* ]] || continue
-        [[ -n "${seen_policy_vars[$name]:-}" ]] && continue
-        policy_vars+=("$name")
-        seen_policy_vars["$name"]=1
-    done < <(env)
+for var in "${!SUBSTITUTION_DEFAULTS[@]}"; do
+    current_value="${!var:-}"
+    if [[ -z "$current_value" ]]; then
+        export "$var=${SUBSTITUTION_DEFAULTS[$var]}"
+    fi
 done
 
-if ((${#policy_vars[@]})); then
-    vars="$(printf '$%s ' "${policy_vars[@]}")"
+[[ -f "$TEMPLATE_PARAM_FILE" ]] || { echo "Template $TEMPLATE_PARAM_FILE not found" >&2; exit 1; }
+cp "$TEMPLATE_PARAM_FILE" "$OUTPUT_PARAM_FILE"
+echo "Using template: $TEMPLATE_PARAM_FILE -> $OUTPUT_PARAM_FILE" >&2
+
+declare -a policy_vars=()
+# Discover variables referenced in the template itself (both $VAR and ${VAR})
+# Note: envsubst only supports shell-style variables: $VAR or ${VAR}
+mapfile -t discovered_vars < <({ grep -hoE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?' "$OUTPUT_PARAM_FILE" || true; } | sed 's/[${}]//g' | sort -u)
+
+filtered_vars=()
+for var in "${discovered_vars[@]}"; do
+    [[ "$var" =~ ^[A-Z0-9_]+$ ]] || continue
+    filtered_vars+=("$var")
+done
+
+echo "Discovered variables in template (count: ${#discovered_vars[@]}). Using filtered set (uppercase only) count: ${#filtered_vars[@]}" >&2
+printf ' - %s\n' "${filtered_vars[@]}" >&2
+
+if ((${#filtered_vars[@]})); then
+    # Build the restricted list for envsubst from discovered names
+    vars="$(printf '$%s ' "${filtered_vars[@]}")"
+    echo "Running envsubst with restricted set: $vars" >&2
     envsubst "$vars" < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
 else
-    cp "$OUTPUT_PARAM_FILE" "${OUTPUT_PARAM_FILE}.tmp"
+    # No discoveries; substitute all variables found by envsubst
+    echo "No variables discovered; running envsubst without a restricted list" >&2
+    envsubst < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
 fi
 
 mv "${OUTPUT_PARAM_FILE}.tmp" "$OUTPUT_PARAM_FILE"
 
 printf 'Resolved policy variables (patterns: %s):\n' "${ENV_PATTERNS[*]:-}"
+
+# Validate the generated JSON so callers fail fast if the template becomes invalid
+if command -v jq >/dev/null 2>&1; then
+    if ! jq empty "$OUTPUT_PARAM_FILE" >/dev/null 2>&1; then
+        echo "Generated parameters file is not valid JSON: $OUTPUT_PARAM_FILE" >&2
+        exit 1
+    fi
+else
+    echo "Warning: jq not found; skipping JSON validation" >&2
+fi
