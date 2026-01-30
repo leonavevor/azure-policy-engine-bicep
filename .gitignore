@@ -6,3 +6,4 @@ compiled/
 decompiled/
 
 bicep/*.parameters.json
+/..bfg-report/

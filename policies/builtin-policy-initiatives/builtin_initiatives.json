@@ -1,14 +1,14 @@
 {
-    "initiativeName": "03de05a4-c324-4ccd-882f-a814ea8ab9ea",
-    "displayName": "Sovereignty Baseline - Confidential Policies",
-    "description": "Confidential Policies",
-    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/03de05a4-c324-4ccd-882f-a814ea8ab9ea",
+    "initiativeName": "179d1daa-458f-4e47-8086-2a68d0d6c38f",
+    "displayName": "NIST SP 800-53 Rev. 5",
+    "description": "National Institute of Standards and Technology (NIST) SP 800-53 Rev. 5 provides a standardized approach for assessing, monitoring and authorizing cloud computing products and services to manage information security risk. These policies address a subset of NIST SP 800-53 R5 controls. Additional policies will be added in upcoming releases. For more information, visit https://aka.ms/nist800-53r5-initiative ref: https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final and https://learn.microsoft.com/en-us/azure/governance/policy/samples/nist-sp-800-53-r5",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/179d1daa-458f-4e47-8086-2a68d0d6c38f",
     "parameters": {}
 },
 {
-    "initiativeName": "c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
-    "displayName": "Sovereignty Baseline - Global Policies",
-    "description": "Global Policies",
-    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/c1cbff38-87c0-4b9f-9f70-035c7a3b5523",
+    "initiativeName": "7326812a-86a4-40c8-af7c-8945de9c4913",
+    "displayName": "EU General Data Protection Regulation (GDPR) 2016/679",
+    "description": "Comprehensive data protection law regulating personal data processing within the EU. ref: https://www.azadvertizer.net/azpolicyinitiativesadvertizer/7326812a-86a4-40c8-af7c-8945de9c4913.html",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/7326812a-86a4-40c8-af7c-8945de9c4913",
     "parameters": {}
 }
