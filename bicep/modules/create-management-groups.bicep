@@ -4,20 +4,39 @@ metadata description = 'This module creates management groups as specified in th
 metadata NOTE = 'Ensure that the deployment has the necessary permissions (owner when running from az cli bicep or ARM template deployment but not required when doing it from the portal) to create management groups in the tenant. ref: https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-tenant?wt.mc_id=knowledgesearch_inproduct_azure-agent-for-github-copilot&tabs=azure-cli#required-access'
 
 param createManagementGroups bool = true
-param managementGroupsToCreate array = ['mg-confidential-corp', 'mg-confidential-online']
-param parentManagementGroupId string = 'mg-landing-zones'
+// Accept an array of objects so each management group can optionally specify its parent for nested creation.
+// Example item: { name: 'mg-child', displayName: 'MG Child', parent: 'mg-parent' }
+param managementGroupsToCreate array = [
+  {
+    name: 'mg-change-me-1'
+    displayName: 'mg-change-me-1'
+    parent: 'mg-change-me'
+  }
+  {
+    name: 'mg-change-me-2'
+    displayName: 'mg-change-me-2'
+    parent: 'mg-change-me'
+  }
+]
+param parentManagementGroupId string = 'mg-change-me'
 
+// Normalize input so every item has name, displayName and parent (falls back to parentManagementGroupId when omitted)
+var normalizedMgs = [ for mg in managementGroupsToCreate: {
+  name: mg.name
+  displayName: mg.?displayName ?? mg.name
+  // If caller provides full resource id (starts with /providers/) use it; otherwise build the managementGroup resourceId
+  parentId: (mg.?parent != null && mg.?parent != '') ? (startsWith(mg.?parent, '/providers/') ? mg.?parent : resourceId('Microsoft.Management/managementGroups', mg.?parent)) : resourceId('Microsoft.Management/managementGroups', parentManagementGroupId)
+}]
 
 // Create management groups if specified
-resource _managementGroups 'Microsoft.Management/managementGroups@2024-02-01-preview' = [
-  for mgName in managementGroupsToCreate: if (createManagementGroups) {
-    //scope: managementGroup(parentManagementGroupId)
-    name: 'management-groups-${mgName}'
+resource _managementGroups 'Microsoft.Management/managementGroups@2023-04-01' = [
+  for mg in normalizedMgs: if (createManagementGroups) {
+    name: mg.name
     properties: {
-      displayName: mgName
+      displayName: mg.displayName
       details: {
         parent: {
-          id: parentManagementGroupId
+          id: mg.parentId
         }
       }
     }
@@ -32,14 +51,15 @@ type mgsOutputType = {
 }
 type mgsOutputTypeArray = mgsOutputType[]
 
-output outMgs mgsOutputTypeArray = [ for mg in range(0, length(managementGroupsToCreate)): {
-  name: _managementGroups[mg].name
-  id: _managementGroups[mg].id
-  properties: _managementGroups[mg].?properties
+output outMgs mgsOutputTypeArray = [ for i in range(0, length(normalizedMgs)): {
+  name: _managementGroups[i].name
+  id: _managementGroups[i].id
+  properties: _managementGroups[i].?properties
 } ]
   
 output outManagementGroups object[] = [
-  for mg in managementGroupsToCreate: {
-    name: mg
+  for mg in normalizedMgs: {
+    name: mg.name
+    parentId: mg.parentId
   }
 ]

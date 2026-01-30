@@ -24,5 +24,5 @@ ASSIGN_BUILTIN_POLICY_INITIATIVES=true
 
 ## DEFAULTS FOR MANAGEMENT GROUPS TO CREATE AND ASSIGN POLICY INITIATIVES TO
 #------------------------------------------------
-MANAGEMENT_GROUP_NAMES_TO_CREATE=[\"mg-confidential-corp\",\"mg-confidential-online\"]
+MANAGEMENT_GROUP_NAMES_TO_CREATE=[\"mg-change-me-1\",\"mg-change-me-2\"]
 

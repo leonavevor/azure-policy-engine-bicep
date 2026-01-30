@@ -1,15 +1,17 @@
 # Makefile for Azure Policy with Bicep
-.PHONY: whatif deploy build lint decompile test clean prep
+.PHONY: whatif deploy build lint decompile test clean prep create-mg whatif-create-mg
 
 default: | help usage
 
 # ARGs and ENV variables: (can be overridden via environment variables or command line arguments: eg: make deploy mg='my-mg' loc='eastus')
-deploymentName ?= "deployment001"  # Set your deployment name here
-mg ?= mg-root  # Set your management group ID here
+deploymentName ?= "deployment-001"  # Set your deployment name here
+mg ?= mg-change-me  # Set your management group ID here
 loc ?= westeurope  # Set your deployment location here
 templateFile ?= ./bicep/main.bicep  # Path to the main Bicep file
 parametersFile ?= ./bicep/main.parameters.json  # Path to the main parameters file
-debugEnabledArg ?= --debug
+mgParametersFile ?= ./bicep/mg.parameters.json  # Optional parameters file for mg.bicep; if missing, the target will pass creatManagementGroups=true
+debugEnabled ?= false  # Set to true to enable debug (conditionally)
+debugEnabledArg ?= $(if $(filter true,$(debugEnabled)),--debug,)  # Conditional debug argument
 otherArgs ?=  # Placeholder for any additional arguments (whatever you wish to add)
 
 
@@ -24,6 +26,8 @@ help:
 	@echo "  test              Run test build script"
 	@echo "  whatif           Perform a what-if deployment at management group level"
 	@echo "  deploy           Deploy the Bicep template at management group level"
+	@echo "  create-mg        Create management groups using bicep/mg.bicep"
+	@echo "  whatif-create-mg  What-if creation of management groups using bicep/mg.bicep"
 	@echo "  clean            Clean up compiled, decompiled, and outputs directories"
 	@echo ""
 	@echo "You can override default variables by passing them as arguments. For example:"
@@ -31,7 +35,7 @@ help:
 
 usage:
 	@echo "Usage: make [target] [VARIABLE=value ...]"
-	@echo "Available targets: prep, build, lint, decompile, test, whatif, whatif-debug, deploy, clean"
+	@echo "Available targets: prep, build, lint, decompile, test, whatif, whatif-debug, deploy, clean, create-mg, whatif-create-mg"
 	@echo "Example1: make deploy mg='my-mg' loc='eastus'"
 	@echo "Example2: make build templateFile='./bicep/other.bicep' parametersFile='./bicep/other.parameters.json'"
 	@echo "Example3: make whatif otherArgs='--no-color'"
@@ -67,5 +71,12 @@ whatif-mg: build
 deploy-mg: build
 	az deployment mg create --name ${deploymentName} --location ${loc} --management-group-id ${mg} --template-file ./bicep/mg.bicep ${debugEnabledArg} ${otherArgs}
 
+create-mg: build
+	@bash -c 'if [ -f "${mgParametersFile}" ]; then paramArg="--parameters @${mgParametersFile}"; else paramArg="--parameters creatManagementGroups=true"; fi; az deployment mg create --name "${deploymentName}" --location "${loc}" --management-group-id "${mg}" --template-file ./bicep/mg.bicep $${paramArg} ${debugEnabledArg} ${otherArgs}'
+
+whatif-create-mg: build
+	@bash -c 'if [ -f "${mgParametersFile}" ]; then paramArg="--parameters @${mgParametersFile}"; else paramArg="--parameters creatManagementGroups=true"; fi; az deployment mg what-if --name "${deploymentName}" --location "${loc}" --management-group-id "${mg}" --template-file ./bicep/mg.bicep --no-pretty-print $${paramArg} ${debugEnabledArg} ${otherArgs}'
+
 clean:
-	rm -rf compiled decompiled outputs
+	@rm -rf compiled decompiled outputs
+

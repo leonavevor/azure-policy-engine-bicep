@@ -23,21 +23,28 @@ param assignCustomPolicyInitiatives bool = true
 param assignBuiltInPolicyInitiatives bool = true
 
 @description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
-param parentManagementGroupName string = 'mg-landing-zones'
+param parentManagementGroupName string = 'mg-change-me'
 
 @description('Parameter to control where the policy initiatives are assigned from this main bicep file.')
-param managementGroupNamesToCreate array = ['mg-confidential-corp', 'mg-confidential-online']
+param managementGroupNamesToCreate array = ['mg-change-me-1', 'mg-change-me-2']
 
 @description('Parameter to control whether to create management groups as specified in the input parameters.')
 param creatManagementGroups bool = true
 
+// Transform simple string array to array of objects expected by the module
+var managementGroupsToCreateObjects = [for mgName in managementGroupNamesToCreate: {
+  name: mgName
+  displayName: mgName
+  parent: parentManagementGroupName
+}]
+
 // Create management group (if not exists)
 module _managementGroups './modules/create-management-groups.bicep' = if (creatManagementGroups) {
   scope: tenant()
-  name: 'create-management-groups'
+  name: 'create-mg'
   params: {
     createManagementGroups: creatManagementGroups
-    managementGroupsToCreate: managementGroupNamesToCreate
+    managementGroupsToCreate: managementGroupsToCreateObjects
     parentManagementGroupId: parentManagementGroupName
   }
 }
@@ -93,7 +100,6 @@ module _customPolicyInitiativeAssignments './modules/deploy-policy-assignment.bi
       _customPolicyInitiatives[index]
     ]
 
-    //scope: map(range(0, length(managementGroupNamesToCreate)), i => managementGroup(managementGroupNamesToCreate[i]))[0]
     scope: managementGroup(managementGroup().name)
   }
 ]
@@ -120,10 +126,8 @@ module _builtInPolicyInitiativeAssignments './modules/deploy-policy-assignment.b
 
     dependsOn: [
       _customPolicyDefinitions
-      //_customPolicyInitiativeAssignments
     ]
 
-    //scope: map(range(0, length(managementGroupNamesToCreate)), i => managementGroup(managementGroupNamesToCreate[i]))[0]
     scope: managementGroup(managementGroup().name)
   }
 ]
