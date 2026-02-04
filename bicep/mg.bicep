@@ -1,10 +1,10 @@
 targetScope = 'managementGroup'
 
 @description('The target management group name where the policies will be assigned. This overrides the default management group of the deployment context, if specified via the targetManagementGroupName parameter.')
-param parentManagementGroupName string = 'mg-change-me'
+param parentManagementGroupName string = 'mg-landing-zones'
 
 @description('Parameter to control where the policy initiatives are assigned from this main bicep file.')
-param managementGroupNamesToCreate array = ['mg-change-me-1', 'mg-change-me-2']
+param managementGroupNamesToCreate array = ['mg-corp', 'mg-online']
 
 @description('Parameter to control whether to create management groups as specified in the input parameters.')
 param creatManagementGroups bool = true

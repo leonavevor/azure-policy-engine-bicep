@@ -8,17 +8,17 @@ param createManagementGroups bool = true
 // Example item: { name: 'mg-child', displayName: 'MG Child', parent: 'mg-parent' }
 param managementGroupsToCreate array = [
   {
-    name: 'mg-change-me-1'
-    displayName: 'mg-change-me-1'
-    parent: 'mg-change-me'
+    name: 'mg-corp'
+    displayName: 'mg-corp'
+    parent: 'mg-landing-zones'
   }
   {
-    name: 'mg-change-me-2'
-    displayName: 'mg-change-me-2'
-    parent: 'mg-change-me'
+    name: 'mg-online'
+    displayName: 'mg-online'
+    parent: 'mg-landing-zones'
   }
 ]
-param parentManagementGroupId string = 'mg-change-me'
+param parentManagementGroupId string = 'mg-landing-zones'
 
 // Normalize input so every item has name, displayName and parent (falls back to parentManagementGroupId when omitted)
 var normalizedMgs = [ for mg in managementGroupsToCreate: {

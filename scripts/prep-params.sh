@@ -7,6 +7,11 @@ POLICY_DIR="${POLICY_DIR:-./policies}"
 FILE_EXTENSION="${FILE_EXTENSION:-.json}"
 OUTPUT_PARAM_FILE="${OUTPUT_PARAM_FILE:-./bicep/main.parameters.json}"
 TEMPLATE_PARAM_FILE="${OUTPUT_PARAM_FILE}.tmpl"
+MG_OUTPUT_PARAM_FILE="${MG_OUTPUT_PARAM_FILE:-./bicep/mg.parameters.json}"
+MG_TEMPLATE_PARAM_FILE="${MG_TEMPLATE_PARAM_FILE:-${MG_OUTPUT_PARAM_FILE}.tmpl}"
+MG_PARAMS_FILE_EXISTS=false
+MG_USE_EXISTING_MG_PARAMS=false
+[[ -f "$MG_OUTPUT_PARAM_FILE" ]] && MG_PARAMS_FILE_EXISTS=true
 
 # Patterns to match environment variables for substitution
 ENV_PATTERNS=("_POLICY_" "_")
@@ -30,13 +35,13 @@ else
 fi
 
 declare -A DEPLOY_FLAGS=(
-    [BUILTIN_POLICY_INITIATIVES]="${DEPLOY_BUILTIN_POLICY_INITIATIVES:-true}"
+    [BUILTIN_POLICY_INITIATIVES]="${ASSIGN_BUILTIN_POLICY_INITIATIVES:-true}"
     [CUSTOM_POLICY_DEFINITIONS]="${DEPLOY_CUSTOM_POLICY_DEFINITIONS:-true}"
     [CUSTOM_POLICY_INITIATIVES]="${DEPLOY_CUSTOM_POLICY_INITIATIVES:-true}"
 )
 
 usage() {
-    echo "Usage: $0 [--policy-dir <path>] [--file-extension <ext>] [--output-param-file <path>]" >&2
+    echo "Usage: $0 [--policy-dir <path>] [--file-extension <ext>] [--output-param-file <path>] [--mg-output-param-file <path>] [--mg-template-param-file <path>]" >&2
     exit 1
 }
 
@@ -45,10 +50,25 @@ while [[ $# -gt 0 ]]; do
         --policy-dir)        POLICY_DIR="${2:-}"; shift 2;;
         --file-extension)    FILE_EXTENSION="${2:-}"; shift 2;;
         --output-param-file) OUTPUT_PARAM_FILE="${2:-}"; TEMPLATE_PARAM_FILE="${OUTPUT_PARAM_FILE}.tmpl"; shift 2;;
+        --mg-output-param-file) MG_OUTPUT_PARAM_FILE="${2:-}"; shift 2;;
+        --mg-template-param-file) MG_TEMPLATE_PARAM_FILE="${2:-}"; shift 2;;
         -h|--help)           usage;;
         *)                   echo "Unknown option: $1" >&2; usage;;
     esac
 done
+
+POLICY_MG_PARAMS_FILE="${POLICY_MG_PARAMS_FILE:-${POLICY_DIR}/mg.parameters.json}"
+if [[ -f "$POLICY_MG_PARAMS_FILE" ]]; then
+    if command -v jq >/dev/null 2>&1 && ! jq empty "$POLICY_MG_PARAMS_FILE" >/dev/null 2>&1; then
+        echo "Policies MG params file is not valid JSON: $POLICY_MG_PARAMS_FILE" >&2
+        exit 1
+    fi
+    cp "$POLICY_MG_PARAMS_FILE" "$MG_OUTPUT_PARAM_FILE"
+    MG_USE_EXISTING_MG_PARAMS=true
+    MG_PARAMS_FILE_EXISTS=true
+fi
+
+[[ -f "$MG_OUTPUT_PARAM_FILE" ]] && MG_PARAMS_FILE_EXISTS=true
 
 sanitize() { echo "${1//[^a-zA-Z0-9]/_}"; }
 
@@ -110,7 +130,16 @@ declare -A SUBSTITUTION_DEFAULTS=(
     [CUSTOM_POLICY_DEFINITIONS_CONTENTS]='[]'
     [CUSTOM_POLICY_INITIATIVES_CONTENTS]='[]'
     [BUILTIN_POLICY_INITIATIVES_CONTENTS]='[]'
+    [MG_MANAGEMENT_GROUPS_TO_CREATE]='[]'
+    [MG_PARENT_MANAGEMENT_GROUP_NAME]='""'
 )
+
+is_mg_param_var() {
+    case "$1" in
+        CREATE_MANAGEMENT_GROUPS|MG_MANAGEMENT_GROUPS_TO_CREATE|MG_PARENT_MANAGEMENT_GROUP_NAME) return 0;;
+        *) return 1;;
+    esac
+}
 
 for var in "${!SUBSTITUTION_DEFAULTS[@]}"; do
     current_value="${!var:-}"
@@ -119,45 +148,133 @@ for var in "${!SUBSTITUTION_DEFAULTS[@]}"; do
     fi
 done
 
-[[ -f "$TEMPLATE_PARAM_FILE" ]] || { echo "Template $TEMPLATE_PARAM_FILE not found" >&2; exit 1; }
-cp "$TEMPLATE_PARAM_FILE" "$OUTPUT_PARAM_FILE"
-echo "Using template: $TEMPLATE_PARAM_FILE -> $OUTPUT_PARAM_FILE" >&2
+load_existing_mg_params() {
+    local existing_file="$MG_OUTPUT_PARAM_FILE"
+    [[ -f "$existing_file" ]] || return 0
 
-declare -a policy_vars=()
-# Discover variables referenced in the template itself (both $VAR and ${VAR})
-# Note: envsubst only supports shell-style variables: $VAR or ${VAR}
-mapfile -t discovered_vars < <({ grep -hoE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?' "$OUTPUT_PARAM_FILE" || true; } | sed 's/[${}]//g' | sort -u)
-
-filtered_vars=()
-for var in "${discovered_vars[@]}"; do
-    [[ "$var" =~ ^[A-Z0-9_]+$ ]] || continue
-    filtered_vars+=("$var")
-done
-
-echo "Discovered variables in template (count: ${#discovered_vars[@]}). Using filtered set (uppercase only) count: ${#filtered_vars[@]}" >&2
-printf ' - %s\n' "${filtered_vars[@]}" >&2
-
-if ((${#filtered_vars[@]})); then
-    # Build the restricted list for envsubst from discovered names
-    vars="$(printf '$%s ' "${filtered_vars[@]}")"
-    echo "Running envsubst with restricted set: $vars" >&2
-    envsubst "$vars" < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
-else
-    # No discoveries; substitute all variables found by envsubst
-    echo "No variables discovered; running envsubst without a restricted list" >&2
-    envsubst < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
-fi
-
-mv "${OUTPUT_PARAM_FILE}.tmp" "$OUTPUT_PARAM_FILE"
-
-printf 'Resolved policy variables (patterns: %s):\n' "${ENV_PATTERNS[*]:-}"
-
-# Validate the generated JSON so callers fail fast if the template becomes invalid
-if command -v jq >/dev/null 2>&1; then
-    if ! jq empty "$OUTPUT_PARAM_FILE" >/dev/null 2>&1; then
-        echo "Generated parameters file is not valid JSON: $OUTPUT_PARAM_FILE" >&2
-        exit 1
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Warning: jq not found; skipping MG parameter overrides from $existing_file" >&2
+        return 0
     fi
-else
-    echo "Warning: jq not found; skipping JSON validation" >&2
+
+    if ! jq empty "$existing_file" >/dev/null 2>&1; then
+        echo "Warning: existing MG params file is not valid JSON; ignoring $existing_file" >&2
+        return 0
+    fi
+
+    if jq -e '.parameters.creatManagementGroups | has("value")' "$existing_file" >/dev/null 2>&1; then
+        export CREATE_MANAGEMENT_GROUPS="$(jq -r '.parameters.creatManagementGroups.value' "$existing_file")"
+    fi
+
+    if jq -e '.parameters.managementGroupNamesToCreate | has("value")' "$existing_file" >/dev/null 2>&1; then
+        export MG_MANAGEMENT_GROUPS_TO_CREATE="$(jq -c '.parameters.managementGroupNamesToCreate.value' "$existing_file")"
+    fi
+
+    if jq -e '.parameters.parentManagementGroupName | has("value")' "$existing_file" >/dev/null 2>&1; then
+        export MG_PARENT_MANAGEMENT_GROUP_NAME="$(jq -c '.parameters.parentManagementGroupName.value' "$existing_file")"
+    fi
+}
+
+normalize_json_string() {
+    local raw="$1"
+
+    if [[ -z "$raw" ]]; then
+        printf '""'
+        return
+    fi
+
+    if command -v jq >/dev/null 2>&1; then
+        if jq -e . >/dev/null 2>&1 <<<"$raw"; then
+            if [[ "$(jq -r 'type' <<<"$raw")" == "string" ]]; then
+                printf '%s' "$raw"
+                return
+            fi
+        fi
+        jq -Rn --arg v "$raw" '$v'
+        return
+    fi
+
+    local escaped="$raw"
+    escaped="${escaped//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+    printf '"%s"' "$escaped"
+}
+
+# Prepare main parameters from template
+if [[ -f "$TEMPLATE_PARAM_FILE" ]]; then
+    cp "$TEMPLATE_PARAM_FILE" "$OUTPUT_PARAM_FILE"
+    echo "Using template: $TEMPLATE_PARAM_FILE -> $OUTPUT_PARAM_FILE" >&2
+
+    load_existing_mg_params
+
+    mapfile -t discovered_vars < <({ grep -hoE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?' "$OUTPUT_PARAM_FILE" || true; } | sed 's/[${}]//g' | sort -u)
+
+    filtered_vars=()
+    for var in "${discovered_vars[@]}"; do
+        [[ "$var" =~ ^[A-Z0-9_]+$ ]] || continue
+        filtered_vars+=("$var")
+    done
+
+    echo "Discovered variables in template (count: ${#discovered_vars[@]}). Using filtered set (uppercase only) count: ${#filtered_vars[@]}" >&2
+    printf ' - %s\n' "${filtered_vars[@]}" >&2
+
+    if ((${#filtered_vars[@]})); then
+        vars="$(printf '$%s ' "${filtered_vars[@]}")"
+        echo "Running envsubst for main params with restricted set: $vars" >&2
+        envsubst "$vars" < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
+    else
+        echo "No variables discovered; running envsubst without a restricted list" >&2
+        envsubst < "$OUTPUT_PARAM_FILE" > "${OUTPUT_PARAM_FILE}.tmp"
+    fi
+
+    mv "${OUTPUT_PARAM_FILE}.tmp" "$OUTPUT_PARAM_FILE"
+
+    if command -v jq >/dev/null 2>&1; then
+        if ! jq empty "$OUTPUT_PARAM_FILE" >/dev/null 2>&1; then
+            echo "Generated parameters file is not valid JSON: $OUTPUT_PARAM_FILE" >&2
+            exit 1
+        fi
+    else
+        echo "Warning: jq not found; skipping JSON validation for main params" >&2
+    fi
 fi
+
+# Prepare management group parameters if a template is present
+if [[ -f "$MG_TEMPLATE_PARAM_FILE" ]]; then
+    if [[ "$MG_USE_EXISTING_MG_PARAMS" != "true" ]]; then
+        cp "$MG_TEMPLATE_PARAM_FILE" "$MG_OUTPUT_PARAM_FILE"
+        echo "Using template: $MG_TEMPLATE_PARAM_FILE -> $MG_OUTPUT_PARAM_FILE" >&2
+
+        mapfile -t mg_discovered_vars < <({ grep -hoE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?' "$MG_OUTPUT_PARAM_FILE" || true; } | sed 's/[${}]//g' | sort -u)
+
+        mg_filtered_vars=()
+        for var in "${mg_discovered_vars[@]}"; do
+            [[ "$var" =~ ^[A-Z0-9_]+$ ]] || continue
+            mg_filtered_vars+=("$var")
+        done
+
+        echo "Discovered MG variables in template (count: ${#mg_discovered_vars[@]}). Using filtered set (uppercase only) count: ${#mg_filtered_vars[@]}" >&2
+        printf ' - %s\n' "${mg_filtered_vars[@]}" >&2
+
+        if ((${#mg_filtered_vars[@]})); then
+            mg_vars="$(printf '$%s ' "${mg_filtered_vars[@]}")"
+            echo "Running envsubst for MG params with restricted set: $mg_vars" >&2
+            envsubst "$mg_vars" < "$MG_OUTPUT_PARAM_FILE" > "${MG_OUTPUT_PARAM_FILE}.tmp"
+        else
+            echo "No MG variables discovered; running envsubst without a restricted list" >&2
+            envsubst < "$MG_OUTPUT_PARAM_FILE" > "${MG_OUTPUT_PARAM_FILE}.tmp"
+        fi
+
+        mv "${MG_OUTPUT_PARAM_FILE}.tmp" "$MG_OUTPUT_PARAM_FILE"
+
+        if command -v jq >/dev/null 2>&1; then
+            if ! jq empty "$MG_OUTPUT_PARAM_FILE" >/dev/null 2>&1; then
+                echo "Generated MG parameters file is not valid JSON: $MG_OUTPUT_PARAM_FILE" >&2
+                exit 1
+            fi
+        else
+            echo "Warning: jq not found; skipping JSON validation for MG params" >&2
+        fi
+    fi
+fi
+

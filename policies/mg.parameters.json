@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "creatManagementGroups": {
+      "value": true
+    },
+    "managementGroupNamesToCreate": {
+      "value": [
+        {
+          "name": "mg-corp",
+          "displayName": "mg-corp",
+          "parent": "mg-landing-zones"
+        },
+        {
+          "name": "mg-online",
+          "displayName": "mg-online",
+          "parent": "mg-landing-zones"
+        }
+      ]
+    },
+    "parentManagementGroupName": {
+      "value": "mg-landing-zones"
+    }
+  }
+}
+

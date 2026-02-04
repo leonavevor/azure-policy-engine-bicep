@@ -1,4 +1,4 @@
-# Pursose: Default environment variables used in parameter preparation acts a default config in case no other envs are provided and set to this if empty.
+# Purpose: Default environment variables used in parameter preparation acts a default config in case no other envs are provided and set to this if empty.
 # So these will eventually end up in the main.parameters.json file used for deployment if for instance no content were found for some policy categories.
 
 
@@ -14,15 +14,13 @@ BUILTIN_POLICY_INITIATIVES_CONTENTS=[]
 CREATE_MANAGEMENT_GROUPS=false
 
 DEPLOY_CUSTOM_POLICY_DEFINITIONS=true
-
 DEPLOY_CUSTOM_POLICY_INITIATIVES=true
-DEPLOY_BUILTIN_POLICY_INITIATIVES=true
 
 ASSIGN_CUSTOM_POLICY_INITIATIVES=true
 ASSIGN_BUILTIN_POLICY_INITIATIVES=true
 
 
-## DEFAULTS FOR MANAGEMENT GROUPS TO CREATE AND ASSIGN POLICY INITIATIVES TO
+## DEFAULTS FOR MANAGEMENT GROUP TEMPLATE VALUES (if no ./policies/mg.parameters.json was found, these will be used)
 #------------------------------------------------
-MANAGEMENT_GROUP_NAMES_TO_CREATE=[\"mg-change-me-1\",\"mg-change-me-2\"]
-
+MG_MANAGEMENT_GROUPS_TO_CREATE='[{"name":"mg-confidential-corp","displayName":"Confidential Corp","parent":"mg-landing-zones"},{"name":"mg-confidential-online","displayName":"Confidential Online","parent":"mg-landing-zones"}]'
+MG_PARENT_MANAGEMENT_GROUP_NAME='"mg-landing-zones"'
